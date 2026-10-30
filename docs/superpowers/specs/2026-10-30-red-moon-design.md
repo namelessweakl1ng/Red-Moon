@@ -1,6 +1,6 @@
 # Red Moon architecture and security design
 
-Status: proposed for user approval. The user selected a single encrypted vault file with an independently tested Rust core. Other details below are implementation proposals, not claims of completed functionality.
+Status: approved by the user on 2026-10-30. The user selected a single encrypted vault file with an independently tested Rust core and subsequently required a very minimal interface with border radius zero. Details below describe intended behavior, not claims of completed functionality.
 
 ## Intent and scope
 
@@ -58,7 +58,7 @@ Changing the master password verifies the current password, derives a fresh key 
 
 Bundle all assets; no external fonts/scripts/images. Disable production devtools, navigation to remote origins, shell/opener/network plugins, and unnecessary capabilities. Define explicit command permissions and a strict CSP allowing only bundled resources and required Tauri IPC; avoid unsafe-eval. Verify release configuration and frontend dependency behavior. Use native dialogs with narrowly scoped backend access.
 
-Use the specified dark palette: #0B0B10, #17171F, #E11D48, #FB7185, #F8FAFC, #9CA3AF. Create a crimson crescent/keyhole SVG with generated platform icons. Implement accessible setup/unlock, sidebar dashboard with list and details, entry editor, generator, backups, and settings. Passwords start masked and require explicit reveal. Provide loading/error/empty states, keyboard focus, labels, contrast, reduced-motion support, and responsive layout. Theme preference can offer system/dark and restrained high-contrast variants while preserving the identity. Destructive actions require clear confirmation.
+Use the specified dark palette: #0B0B10, #17171F, #E11D48, #FB7185, #F8FAFC, #9CA3AF. The user requires a very minimal interface: border-radius zero throughout, flat surfaces, restrained dividers and red accents, no decorative glass panels or excessive glow. Create a crimson crescent/keyhole SVG with generated platform icons. Implement accessible setup/unlock, sidebar dashboard with list and details, entry editor, generator, backups, and settings. Passwords start masked and require explicit reveal. Provide loading/error/empty states, keyboard focus, labels, contrast, reduced-motion support, and responsive layout. Theme preference can offer system/dark and restrained high-contrast variants while preserving the identity. Destructive actions require clear confirmation.
 
 ## Delivery and validation stages
 
