@@ -27,10 +27,16 @@ public final class NativeVault {
         require(request("{\"action\":\"list\"}", 5).contains("\"error\""));
         require(request("{\"action\":\"unlock\",\"password\":\"wrong\"}", 6).contains("\"error\""));
         ok("{\"action\":\"unlock\",\"password\":\"long synthetic café passphrase\"}", 7);
+        for (String kind : new String[]{"login","secure_note","identity","indian_document","financial","custom"}) {
+            ok("{\"action\":\"save_record\",\"record\":{\"id\":\"\",\"kind\":\"" + kind + "\",\"title\":\"synthetic-" + kind + "\",\"category\":\"personal\",\"tags\":[],\"favorite\":false,\"created_at\":0,\"modified_at\":0,\"fields\":[{\"id\":\"private\",\"label\":\"Private value\",\"field_type\":\"secret\",\"value\":\"JNI_new_secret_value\"}],\"notes\":\"JNI private note body\",\"checklist\":[]}}", 8);
+        }
+        String summaries = ok("{\"action\":\"list_records\"}", 8);
+        require(summaries.contains("synthetic-custom") && !summaries.contains("JNI_new_secret_value") && !summaries.contains("JNI private note body"));
+        require(ok("{\"action\":\"search_records\",\"query\":\"private note body\"}", 8).contains("synthetic-secure_note"));
         String backup = ok("{\"action\":\"backup\"}", 8);
         java.util.regex.Matcher data = java.util.regex.Pattern.compile("\"data\":\"([^\"]+)\"").matcher(backup);
         require(data.find());
-        ok("{\"action\":\"restore\",\"data\":\"" + data.group(1) + "\",\"password\":\"long synthetic café passphrase\",\"current\":\"long synthetic café passphrase\"}", 9);
+        require(ok("{\"action\":\"restore\",\"data\":\"" + data.group(1) + "\",\"password\":\"long synthetic café passphrase\",\"current\":\"long synthetic café passphrase\"}", 9).contains("\"record_count\":7"));
         require(!new String(java.nio.file.Files.readAllBytes(vault), java.nio.charset.StandardCharsets.ISO_8859_1).contains("Synthetic_JNI_secret_2026"));
         System.out.println("Real JNI create/save/list/reveal/lock/unlock/backup/restore smoke passed.");
     }

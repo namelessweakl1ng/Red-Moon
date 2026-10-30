@@ -86,7 +86,7 @@ pub fn encrypt(doc: &Document, key: &[u8; 32], h: &Header) -> Result<Vec<u8>> {
     let nonce: [u8; 24] = random()?;
     let mut header = Vec::with_capacity(80);
     header.extend_from_slice(MAGIC);
-    header.extend_from_slice(&[1, 1, 1, 19]);
+    header.extend_from_slice(&[2, 1, 1, 19]);
     for n in [h.memory, h.iterations, h.lanes] {
         header.extend_from_slice(&n.to_le_bytes());
     }
@@ -106,11 +106,12 @@ pub fn encrypt(doc: &Document, key: &[u8; 32], h: &Header) -> Result<Vec<u8>> {
     header.extend(ciphertext);
     Ok(header)
 }
-pub fn decrypt(bytes: &[u8], password: &SecretString) -> Result<UnlockedVault> {
+fn parse_header(bytes: &[u8]) -> Result<Header> {
     if bytes.len() < 96
         || bytes.len() > MAX_FILE
         || &bytes[..8] != MAGIC
-        || bytes[8..12] != [1, 1, 1, 19]
+        || ![1, 2].contains(&bytes[8])
+        || bytes[9..12] != [1, 1, 19]
         || bytes[72..80] != [0; 8]
     {
         return Err(Error::Format);
@@ -126,7 +127,22 @@ pub fn decrypt(bytes: &[u8], password: &SecretString) -> Result<UnlockedVault> {
         lanes: num(20),
         salt: bytes[24..40].try_into().expect("validated header"),
     };
+    if !(65536..=262144).contains(&header.memory)
+        || !(3..=10).contains(&header.iterations)
+        || !(1..=4).contains(&header.lanes)
+    {
+        return Err(Error::Format);
+    }
+    Ok(header)
+}
+pub fn decrypt(bytes: &[u8], password: &SecretString) -> Result<UnlockedVault> {
+    let header = parse_header(bytes)?;
     let key = derive(password, &header)?;
+    decrypt_with_key(bytes, &*key)
+}
+pub fn decrypt_with_key(bytes: &[u8], raw_key: &[u8]) -> Result<UnlockedVault> {
+    let header = parse_header(bytes)?;
+    let key = Zeroizing::new(<[u8; 32]>::try_from(raw_key).map_err(|_| Error::Authentication)?);
     let plaintext = Zeroizing::new(
         XChaCha20Poly1305::new((&*key).into())
             .decrypt(
@@ -138,7 +154,9 @@ pub fn decrypt(bytes: &[u8], password: &SecretString) -> Result<UnlockedVault> {
             )
             .map_err(|_| Error::Authentication)?,
     );
-    let document: Document = serde_json::from_slice(&plaintext)?;
+    let mut document: Document = serde_json::from_slice(&plaintext)?;
+    document.validate()?;
+    document.materialize_legacy_categories()?;
     document.validate()?;
     Ok(UnlockedVault {
         document,

@@ -37,7 +37,7 @@ class VaultModel(application: Application) : AndroidViewModel(application) {
     var busy by mutableStateOf(false)
         private set
 
-    private var screenState by mutableStateOf("Passwords")
+    private var screenState by mutableStateOf("Vault")
     var screen: String
         get() = screenState
         set(value) {
@@ -55,8 +55,54 @@ class VaultModel(application: Application) : AndroidViewModel(application) {
 
     var password by mutableStateOf("")
     var notes by mutableStateOf("")
+    var restoreReport by mutableStateOf("")
     var pendingBackup: ByteArray? = null
     var pendingRestore: ByteArray? = null
+    var onCredentialsChanged: () -> Unit = {}
+
+    fun reportError(message: String) {
+        error = message
+    }
+
+    suspend fun exportBiometricKey(password: String, expectedEpoch: Long): ByteArray {
+        check(uiEpoch == expectedEpoch && unlocked) {
+            "Session changed. Unlock with your master password."
+        }
+        val response =
+            withContext(worker) {
+                native(JSONObject().put("action", "biometric_enroll").put("password", password))
+            }
+        val key =
+            android.util.Base64.decode(
+                response.getJSONObject("ok").getString("key"),
+                android.util.Base64.NO_WRAP,
+            )
+        if (uiEpoch != expectedEpoch) {
+            key.fill(0)
+            throw IllegalStateException("Session changed")
+        }
+        return key
+    }
+
+    suspend fun unlockBiometricKey(key: ByteArray, expectedEpoch: Long) {
+        check(uiEpoch == expectedEpoch) { "Session changed" }
+        try {
+            withContext(worker) {
+                native(
+                    JSONObject()
+                        .put("action", "biometric_unlock")
+                        .put(
+                            "key",
+                            android.util.Base64.encodeToString(key, android.util.Base64.NO_WRAP),
+                        )
+                )
+            }
+            check(uiEpoch == expectedEpoch) { "Session changed" }
+        } finally {
+            if (uiEpoch != expectedEpoch) NativeVault.enqueueLock()
+        }
+    }
+
     private val clipboard = application.getSystemService(ClipboardManager::class.java)
     private var clipboardToken = 0L
     private var copiedPassword: String? = null
@@ -120,7 +166,7 @@ class VaultModel(application: Application) : AndroidViewModel(application) {
         selected = null
         password = ""
         notes = ""
-        screen = "Passwords"
+        screen = "Vault"
         try {
             clearOwnedClipboard()
         } catch (_: SecurityException) {
@@ -134,7 +180,12 @@ class VaultModel(application: Application) : AndroidViewModel(application) {
         unlocked = false
     }
 
+    private var lastActivitySent = 0L
+
     fun activity() {
+        val elapsed = SystemClock.elapsedRealtime()
+        if (elapsed - lastActivitySent < 1500) return
+        lastActivitySent = elapsed
         if (unlocked)
             viewModelScope.launch {
                 try {
@@ -154,6 +205,11 @@ class VaultModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             try {
                 val result = withContext(worker) { native(request) }
+                if (
+                    request.optString("action") in
+                        listOf("change_password", "restore", "delete_vault")
+                )
+                    onCredentialsChanged()
                 if (epoch == generation) {
                     if (navigation == navigationEpoch) done(result)
                     refresh()
@@ -166,11 +222,24 @@ class VaultModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    suspend fun searchRecords(query: String): Set<String> {
+        val generation = epoch
+        val navigation = navigationEpoch
+        val result =
+            withContext(worker) {
+                native(JSONObject().put("action", "search_records").put("query", query))
+            }
+        check(generation == epoch && navigation == navigationEpoch) { "Session changed" }
+        val records = result.getJSONObject("ok").getJSONArray("records")
+        return (0 until records.length()).map { records.getJSONObject(it).getString("id") }.toSet()
+    }
+
     fun load() {
         val generation = epoch
         viewModelScope.launch {
             try {
-                val result = withContext(worker) { native(JSONObject().put("action", "list")) }
+                val result =
+                    withContext(worker) { native(JSONObject().put("action", "list_records")) }
                 if (epoch == generation) snapshot = result.getJSONObject("ok")
             } catch (e: Exception) {
                 if (epoch == generation) error = e.message ?: "Cannot load vault"
@@ -183,8 +252,8 @@ class VaultModel(application: Application) : AndroidViewModel(application) {
         selected = entry
         password = ""
         notes = ""
-        run(JSONObject().put("action", "detail").put("id", entry.getString("id"))) {
-            notes = it.getJSONObject("ok").getString("notes")
+        run(JSONObject().put("action", "record_detail").put("id", entry.getString("id"))) {
+            notes = it.getJSONObject("ok").optJSONObject("record")?.optString("notes") ?: ""
         }
     }
 

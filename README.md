@@ -39,3 +39,8 @@ The approved design and plan are under `docs/superpowers/`.
 ## Android Studio / phone application
 
 A native Kotlin/Jetpack Compose Android project is now available in [`android`](android/README.md), sharing the Rust encrypted vault core. See its README for Rust/NDK setup, Android Studio import and USB installation instructions. Desktop-specific Linux WebKit limitations do not apply to this native Android app. Device behavior must still be verified before storing real credentials.
+
+
+## Red Moon 2.0 Android upgrade
+
+The Android app now supports encrypted typed personal records, independent secure notes/checklists, categories, a redesigned Material3 UI, optional Keystore-backed biometric key wrapping and encrypted SAF backups. See [Android setup](android/README.md), [security/format](docs/RED_MOON_2_SECURITY.md), [device recovery test](docs/ANDROID_RECOVERY_TEST.md) and [verified results](android/VALIDATION.md). Automatic cloud backup remains gated on real-provider recovery validation. The desktop UI has not been redesigned for the new record types; its updated Rust core preserves them.

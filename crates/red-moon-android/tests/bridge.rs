@@ -32,3 +32,32 @@ fn encrypted_mobile_backup_rejects_wrong_password_and_restores() {
     assert!(b.request(&good.to_string(), 3).get("error").is_none());
     assert!(b.request(r#"{"action":"list"}"#, 4)["ok"]["entries"].is_array());
 }
+#[test]
+fn biometric_material_requires_master_reauth_and_authenticates_ciphertext() {
+    let d = tempfile::tempdir().unwrap();
+    let mut b = Bridge::open(d.path().join("vault.rm")).unwrap();
+    b.request(
+        r#"{"action":"create","password":"long mobile master passphrase"}"#,
+        0,
+    );
+    assert!(
+        b.request(r#"{"action":"biometric_enroll","password":"wrong"}"#, 1)["error"].is_string()
+    );
+    let key = b.request(
+        r#"{"action":"biometric_enroll","password":"long mobile master passphrase"}"#,
+        2,
+    )["ok"]["key"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    b.request(r#"{"action":"lock"}"#, 3);
+    assert!(
+        b.request(r#"{"action":"biometric_unlock","key":"not-base64"}"#, 4)["error"].is_string()
+    );
+    let unlocked = b.request(
+        &serde_json::json!({"action":"biometric_unlock","key":key}).to_string(),
+        5,
+    );
+    assert!(unlocked.get("error").is_none());
+    assert!(b.request(r#"{"action":"list_records"}"#, 6)["ok"]["records"].is_array());
+}

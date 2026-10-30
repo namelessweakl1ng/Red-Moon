@@ -1,4 +1,4 @@
-# Red Moon for Android
+# Red Moon 2.0 for Android
 
 Open **this `android` directory** in Android Studio. This is a native Kotlin/Jetpack Compose app using the same Rust encrypted vault core as desktop; it does not use the desktop webview.
 
@@ -29,6 +29,21 @@ Command-line equivalents, from this directory:
 ```
 
 On Windows use `gradlew.bat` instead. The debug APK is generated under `app/build/outputs/apk/debug/app-debug.apk`. Debug signing is for development; create and securely retain your own release signing key before long-term distribution. Losing the signing key can prevent in-place updates. Never commit keystores or their passwords.
+
+## Red Moon 2.0
+
+The native app now has Vault/Notes/Categories/Settings bottom navigation, rounded light/dark/system themes, encrypted login/note/identity/document/financial/custom records, typed custom fields and checklists, custom category management, explicit masked-field reveal, private body search and optional cryptographic biometric unlock. All records use the shared Rust vault.
+
+**Upgrade:** keep an independently verified encrypted backup and the original signing key. The first v1 save preserves `vault.v1-safety.rm` and writes authenticated format2. Old binaries cannot read format2. Do not uninstall to fix a signing-key mismatch because that removes private vault/recovery copies. New-device recovery requires only the backup's master password; configure biometrics again there.
+
+Use Settings → **Back up to Google Drive** and select Drive in the system picker. A local provider works offline; Drive may require connectivity. Backup status distinguishes completed provider writes, verified read-back and unproven cloud synchronization, retaining earlier successful/verified evidence after failed attempts. Automatic backups are not enabled.
+
+Detailed instructions:
+
+- [Samsung M31 and new-phone recovery acceptance procedure](../docs/ANDROID_RECOVERY_TEST.md)
+- [Cryptographic schema, biometrics and limits](../docs/RED_MOON_2_SECURITY.md)
+- [Actual verification results and remaining limitations](VALIDATION.md)
+- [Gated automatic backup design](../docs/AUTOMATIC_BACKUP_DESIGN.md)
 
 ## Android protections and behavior
 

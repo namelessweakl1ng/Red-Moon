@@ -34,6 +34,30 @@ impl Bridge {
             }
             let v: Value = serde_json::from_str(input)?;
             match v["action"].as_str() {
+                Some("biometric_enroll") => {
+                    self.backend.guard(now)?;
+                    let password =
+                        SecretString::new(v["password"].as_str().ok_or(Error::Format)?.to_owned());
+                    let key = self.backend.vault.biometric_key(&password)?;
+                    Ok(json!({"key":STANDARD.encode(&*key)}))
+                }
+                Some("biometric_unlock") => {
+                    let encoded = v["key"].as_str().ok_or(Error::Authentication)?;
+                    if encoded.len() > 64 {
+                        return Err(Error::Authentication);
+                    }
+                    let key = Zeroizing::new(
+                        STANDARD
+                            .decode(encoded)
+                            .map_err(|_| Error::Authentication)?,
+                    );
+                    if key.len() != 32 {
+                        return Err(Error::Authentication);
+                    }
+                    self.backend.vault.unlock_with_key(&key)?;
+                    self.backend.start(now)?;
+                    Ok(json!({"generation":self.backend.session.generation}))
+                }
                 Some("backup") => {
                     self.backend.guard(now)?;
                     Ok(json!({"data":STANDARD.encode(self.backend.vault.backup_snapshot()?)}))
@@ -63,7 +87,10 @@ impl Bridge {
                     let _ = std::fs::remove_file(path);
                     restored?;
                     self.backend.start(now)?;
-                    Ok(Value::Null)
+                    let document = self.backend.vault.document()?;
+                    Ok(
+                        json!({"record_count":document.entries.len()+document.records.len(),"category_count":document.categories.len()}),
+                    )
                 }
                 Some("copy_password") | Some("copy_username") => {
                     let p = self.backend.secret(
