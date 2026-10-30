@@ -121,7 +121,7 @@ class VaultModel(application: Application) : AndroidViewModel(application) {
                     val r =
                         JSONObject(
                             NativeVault.initialize(
-                                File(application.filesDir, "vault.rm").absolutePath
+                                File(application.filesDir.canonicalPath, "vault.rm").absolutePath
                             )
                         )
                     check(!r.has("error")) { r.optString("error") }
