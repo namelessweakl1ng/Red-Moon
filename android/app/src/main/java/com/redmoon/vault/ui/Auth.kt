@@ -68,15 +68,16 @@ internal fun AuthScreen(
         Modifier.safeDrawingPadding()
             .imePadding()
             .verticalScroll(rememberScrollState())
-            .padding(28.dp),
+            .fillMaxWidth()
+            .padding(horizontal = 28.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Brand()
-        Spacer(Modifier.height(54.dp))
+        Spacer(Modifier.height(24.dp))
         Heading(
-            if (v.exists) "Welcome back." else "A home for your secrets.",
-            if (v.exists) "Unlock your vault to pick up where you left off."
-            else "Passwords, documents and private notes, encrypted on your device.",
+            if (v.exists) "Unlock your vault" else "Create your vault",
+            if (v.exists) "Enter your master password to continue."
+            else "One master password. Your details, kept private.",
         )
         if (v.error.isNotBlank()) Text(v.error, color = MaterialTheme.colorScheme.error)
         Field("Master password", password, true) { password = it }
@@ -88,7 +89,7 @@ internal fun AuthScreen(
             )
         }
         Primary(
-            if (v.exists) "Unlock vault" else "Create my vault",
+            if (v.exists) "Unlock vault" else "Create vault",
             !v.busy &&
                 password.isNotEmpty() &&
                 (v.exists ||
@@ -111,9 +112,9 @@ internal fun AuthScreen(
         TextButton(onClick = restore, enabled = !v.busy, modifier = Modifier.fillMaxWidth()) {
             Text("Restore encrypted backup")
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(8.dp))
         Text(
-            "Private by design. No account required.",
+            "Encrypted on this device. No account required.",
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

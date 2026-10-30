@@ -61,3 +61,7 @@ Detailed instructions:
 Check the repository's current completion report for actual build/test results. Host Rust tests and cross-compilation do not establish that lifecycle, clipboard, IME, document-provider or screenshot behavior works on a real phone. Instrumentation tests are provided and require an attached device/emulator. No independent security audit has been performed. Use synthetic credentials during initial device testing.
 
 Current verified results and remaining device checks: [VALIDATION.md](VALIDATION.md).
+
+## Current UI: 2.1.0
+
+The latest Android build uses the requested **zero-radius** design: flat account rows, square controls/navigation, simpler forms and less visible field-configuration clutter. It replaces the earlier rounded Material3 presentation. Read the [design references and rationale](../docs/superpowers/specs/2026-10-31-flat-ui-design.md). Application ID and encrypted data format are unchanged; versionCode3 supports an in-place update signed with your existing key. Preserve your backup and signing key as described above.

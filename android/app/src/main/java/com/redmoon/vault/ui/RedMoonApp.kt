@@ -2,16 +2,24 @@ package com.redmoon.vault.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.redmoon.vault.R
 import com.redmoon.vault.VaultModel
 import org.json.JSONArray
@@ -58,12 +66,16 @@ fun RedMoonApp(
     val colors =
         if (dark)
             darkColorScheme(
-                primary = Color(0xFFFF6B7B),
-                onPrimary = Color(0xFF3E0011),
-                background = Color(0xFF101116),
-                surface = Color(0xFF191B23),
-                surfaceVariant = Color(0xFF252731),
-                secondaryContainer = Color(0xFF3B2530),
+                primary = Color(0xFFFB7185),
+                onPrimary = Color(0xFF220711),
+                background = Color(0xFF0B0B10),
+                surface = Color(0xFF14141B),
+                surfaceVariant = Color(0xFF202029),
+                onSurfaceVariant = Color(0xFF9CA3AF),
+                outline = Color(0xFF737382),
+                outlineVariant = Color(0xFF292932),
+                secondaryContainer = Color(0xFF22222C),
+                onSecondaryContainer = Color(0xFFF8FAFC),
             )
         else
             lightColorScheme(
@@ -78,9 +90,32 @@ fun RedMoonApp(
         colorScheme = colors,
         shapes =
             Shapes(
-                small = RoundedCornerShape(12.dp),
-                medium = RoundedCornerShape(18.dp),
-                large = RoundedCornerShape(24.dp),
+                extraSmall = RoundedCornerShape(0.dp),
+                small = RoundedCornerShape(0.dp),
+                medium = RoundedCornerShape(0.dp),
+                large = RoundedCornerShape(0.dp),
+                extraLarge = RoundedCornerShape(0.dp),
+            ),
+        typography =
+            Typography(
+                headlineMedium =
+                    TextStyle(
+                        fontSize = 28.sp,
+                        lineHeight = 34.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = (-0.8).sp,
+                    ),
+                titleLarge =
+                    TextStyle(fontSize = 21.sp, lineHeight = 28.sp, fontWeight = FontWeight.Medium),
+                titleMedium =
+                    TextStyle(fontSize = 15.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium),
+                bodyLarge = TextStyle(fontSize = 15.sp, lineHeight = 23.sp),
+                bodyMedium = TextStyle(fontSize = 13.sp, lineHeight = 20.sp),
+                bodySmall = TextStyle(fontSize = 12.sp, lineHeight = 18.sp),
+                labelLarge =
+                    TextStyle(fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium),
+                labelSmall =
+                    TextStyle(fontSize = 10.sp, lineHeight = 14.sp, letterSpacing = 0.6.sp),
             ),
     ) {
         Surface(Modifier.fillMaxSize(), color = colors.background) {
@@ -116,42 +151,24 @@ fun RedMoonApp(
                             "Favorites" -> "Vault"
                             else -> if (v.screen.startsWith("Category:")) "Vault" else v.screen
                         }
+                    val keyboardOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
                     Scaffold(
                         containerColor = colors.background,
                         bottomBar = {
-                            if (destination in listOf("Vault", "Notes", "Categories", "Settings"))
-                                NavigationBar(containerColor = colors.surface) {
-                                    listOf(
-                                            Triple("Vault", R.drawable.nav_vault, "Vault"),
-                                            Triple("Notes", R.drawable.nav_notes, "Notes"),
-                                            Triple(
-                                                "Categories",
-                                                R.drawable.nav_categories,
-                                                "Categories",
-                                            ),
-                                            Triple("Settings", R.drawable.nav_settings, "Settings"),
-                                        )
-                                        .forEach { (page, glyph, label) ->
-                                            NavigationBarItem(
-                                                selected = destination == page,
-                                                onClick = {
-                                                    v.selected = null
-                                                    v.screen = page
-                                                },
-                                                icon = {
-                                                    Icon(
-                                                        painterResource(glyph),
-                                                        contentDescription = label,
-                                                    )
-                                                },
-                                                label = { Text(label) },
-                                            )
-                                        }
+                            if (
+                                !keyboardOpen &&
+                                    destination in
+                                        listOf("Vault", "Notes", "Categories", "Settings")
+                            )
+                                FlatNavigation(destination) { page ->
+                                    v.selected = null
+                                    v.screen = page
                                 }
                         },
                         floatingActionButton = {
-                            if (destination == "Vault" || destination == "Notes")
+                            if (!keyboardOpen && (destination == "Vault" || destination == "Notes"))
                                 ExtendedFloatingActionButton(
+                                    shape = RectangleShape,
                                     onClick = {
                                         v.selected = null
                                         v.screen = if (destination == "Notes") "NewNote" else "New"
@@ -228,7 +245,7 @@ internal fun Brand() {
         Image(
             painterResource(R.drawable.red_moon_mark),
             contentDescription = null,
-            modifier = Modifier.size(38.dp),
+            modifier = Modifier.size(30.dp),
         )
         Column {
             Text(
@@ -237,7 +254,7 @@ internal fun Brand() {
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
-                "Your private space",
+                "PRIVATE VAULT",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -269,3 +286,52 @@ internal fun Section(title: String) {
 
 internal fun JSONObject.matchesCategory(value: String): Boolean =
     optString("id").equals(value, true) || optString("name").equals(value, true)
+
+@Composable
+private fun FlatNavigation(destination: String, navigate: (String) -> Unit) {
+    Column(Modifier.background(MaterialTheme.colorScheme.surface).navigationBarsPadding()) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Row(Modifier.fillMaxWidth()) {
+            listOf(
+                    Triple("Vault", R.drawable.nav_vault, "Vault"),
+                    Triple("Notes", R.drawable.nav_notes, "Notes"),
+                    Triple("Categories", R.drawable.nav_categories, "Categories"),
+                    Triple("Settings", R.drawable.nav_settings, "Settings"),
+                )
+                .forEach { (page, icon, label) ->
+                    val selected = destination == page
+                    val color =
+                        if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    Column(
+                        Modifier.weight(1f)
+                            .selectable(
+                                selected = selected,
+                                role = Role.Tab,
+                                onClick = { navigate(page) },
+                            )
+                            .heightIn(min = 72.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Box(
+                            Modifier.fillMaxWidth()
+                                .height(2.dp)
+                                .background(if (selected) color else Color.Transparent)
+                        )
+                        Icon(
+                            painterResource(icon),
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.padding(top = 13.dp, bottom = 6.dp).size(20.dp),
+                        )
+                        Text(
+                            label,
+                            color = color,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(bottom = 12.dp),
+                        )
+                    }
+                }
+        }
+    }
+}

@@ -22,3 +22,11 @@ Follow `docs/ANDROID_RECOVERY_TEST.md` with synthetic data on your phone and an 
 RustSec reports zero findings in its vulnerability category, while still reporting the existing `glib` unsoundness advisory RUSTSEC-2024-0429 and unmaintained `proc-macro-error` advisory RUSTSEC-2024-0370 in the desktop dependency graph. These are unresolved; GTK/GLib are not shipped in the Android dependency graph. A complete Android/Maven dependency vulnerability audit remains outstanding.
 
 Automatic cloud backup is deliberately not implemented/enabled until real-provider manual backup and new-device recovery are proven. See `docs/AUTOMATIC_BACKUP_DESIGN.md` for the gated follow-up. Do not interpret successful provider write/read-back or compilation as proof of remote synchronization or reliable fingerprint authentication.
+
+## Flat UI 2.1.0 revision — 2026-10-31
+
+UI-only redesign: compact divider list, reduced filtering chrome, flat navigation, focused standard fields with advanced field options, and explicit zero-radius application controls including buttons, chips, dialogs, slider and checkboxes. All5 theme shape sizes are0. Search chrome scrolls with the list and bottom navigation/FAB hide for the IME. Vault/Notes type/search state resets when changing sections.
+
+Verified: eight existing Kotlin tests, Android app and instrumentation APK builds, lint with zero issues, signature/alignment and no-Internet manifest checks. No cryptographic/backend changes; the earlier core/JNI evidence remains applicable and was not represented as a new crypto-test run. Dark accent/surface contrast was measured6.81:1 (small text); primary/on-primary7.05:1. Code review findings about short-height search, contrast and independent Material rounded tokens were addressed and the Android checks rerun.
+
+References actually inspected and research limitations are recorded in `docs/superpowers/specs/2026-10-31-flat-ui-design.md`. No current store-rating claim is made. Actual phone visual, touch/IME and accessibility validation remains unrun here; OS-owned biometric/provider screens are not restyled.

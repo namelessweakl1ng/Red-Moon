@@ -111,8 +111,8 @@ internal fun RecordEditor(v: VaultModel, newNote: Boolean) {
     ) {
         item {
             Heading(
-                if (selectedId == null) "Make room for something." else "Edit item",
-                "Changes stay on this device, encrypted in your vault.",
+                if (selectedId == null) "New item" else "Edit item",
+                "Save the details you need in your encrypted vault.",
             )
         }
         if (selectedId == null)
@@ -141,63 +141,100 @@ internal fun RecordEditor(v: VaultModel, newNote: Boolean) {
         }
         item { Section("Details") }
         itemsIndexed(fields, key = { _, f -> f.optString("id") }) { index, f ->
-            OutlinedCard(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Field("Field label", f.optString("label")) { updateField(index, "label", it) }
-                    Row(
-                        Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        listOf("text", "secret", "multiline", "number", "date", "url").forEach {
-                            type ->
-                            FilterChip(
-                                f.optString("field_type") == type,
-                                { updateField(index, "field_type", type) },
-                                { Text(type.replaceFirstChar { it.uppercase() }) },
-                            )
-                        }
+            var optionsOpen by
+                remember(f.optString("id")) {
+                    mutableStateOf(f.optString("label").isBlank())
+                }
+            val fieldType = f.optString("field_type")
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Field(
+                    label =
+                        f.optString("label").ifBlank { "Custom field" } +
+                            if (fieldType == "date") " (YYYY-MM-DD)" else "",
+                    value = f.optString("value"),
+                    secret = fieldType == "secret",
+                    multiline = fieldType == "multiline",
+                    type = fieldType,
+                ) {
+                    updateField(index, "value", it)
+                }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    TextButton(onClick = { optionsOpen = !optionsOpen }) {
+                        Text(if (optionsOpen) "Done with options" else "Field options")
                     }
-                    Field(
-                        if (f.optString("field_type") == "date") "Value (YYYY-MM-DD)" else "Value",
-                        f.optString("value"),
-                        secret = f.optString("field_type") == "secret",
-                        multiline = f.optString("field_type") == "multiline",
-                        type = f.optString("field_type"),
-                    ) {
-                        updateField(index, "value", it)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        TextButton(
-                            onClick = {
-                                fields =
-                                    fields.toMutableList().apply { add(index - 1, removeAt(index)) }
-                            },
-                            enabled = index > 0,
-                        ) {
-                            Text("Move up")
-                        }
-                        TextButton(
-                            onClick = {
-                                fields =
-                                    fields.toMutableList().apply { add(index + 1, removeAt(index)) }
-                            },
-                            enabled = index < fields.lastIndex,
-                        ) {
-                            Text("Down")
-                        }
-                        TextButton(
-                            onClick = { fields = fields.filterIndexed { i, _ -> i != index } }
-                        ) {
-                            Text("Remove")
-                        }
-                    }
-                    if (f.optString("field_type") == "secret")
+                    if (fieldType == "secret")
                         TextButton(
                             onClick = { generatorField = f.optString("id") },
                             enabled = !v.busy,
                         ) {
                             Text("Generate password")
                         }
+                }
+                if (optionsOpen) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Field("Field name", f.optString("label")) {
+                            updateField(index, "label", it)
+                        }
+                        Text(
+                            "Field type",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Row(
+                            Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            listOf("text", "secret", "multiline", "number", "date", "url")
+                                .forEach { type ->
+                                    FilterChip(
+                                        fieldType == type,
+                                        { updateField(index, "field_type", type) },
+                                        { Text(type.replaceFirstChar { it.uppercase() }) },
+                                    )
+                                }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(
+                                onClick = {
+                                    fields =
+                                        fields.toMutableList().apply {
+                                            add(index - 1, removeAt(index))
+                                        }
+                                    v.activity()
+                                },
+                                enabled = index > 0,
+                            ) {
+                                Text("Move up")
+                            }
+                            TextButton(
+                                onClick = {
+                                    fields =
+                                        fields.toMutableList().apply {
+                                            add(index + 1, removeAt(index))
+                                        }
+                                    v.activity()
+                                },
+                                enabled = index < fields.lastIndex,
+                            ) {
+                                Text("Move down")
+                            }
+                            TextButton(
+                                onClick = {
+                                    fields = fields.filterIndexed { i, _ -> i != index }
+                                    v.activity()
+                                }
+                            ) {
+                                Text("Remove", color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                    HorizontalDivider()
                 }
             }
         }

@@ -1,22 +1,32 @@
 package com.redmoon.vault.ui
 
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.redmoon.vault.VaultModel
 import org.json.JSONObject
 
 @Composable
 internal fun VaultScreen(v: VaultModel, notesOnly: Boolean, initialCategory: String = "") {
-    var query by remember { mutableStateOf("") }
+    var query by remember(notesOnly) { mutableStateOf("") }
     var matchingIds by remember { mutableStateOf<Set<String>?>(null) }
+    var kind by remember(notesOnly) { mutableStateOf("all") }
+    var category by remember(notesOnly, initialCategory) { mutableStateOf(initialCategory) }
+    var favorites by remember(notesOnly) { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    LaunchedEffect(notesOnly, initialCategory) { listState.scrollToItem(0) }
+    var showTypes by remember { mutableStateOf(false) }
+    var showCategories by remember { mutableStateOf(false) }
     LaunchedEffect(query) {
         matchingIds = null
         if (query.isNotBlank()) {
@@ -30,140 +40,194 @@ internal fun VaultScreen(v: VaultModel, notesOnly: Boolean, initialCategory: Str
             }
         }
     }
-    var kind by remember { mutableStateOf("all") }
-    var category by remember(initialCategory) { mutableStateOf(initialCategory) }
-    var favorites by remember { mutableStateOf(false) }
     val categories = v.snapshot.optJSONArray("categories").objects().sortedBy { it.optInt("order") }
     val all =
         v.snapshot.optJSONArray("records").objects().filter {
             !notesOnly || it.optString("kind") == "secure_note"
         }
+    val selectedCategory = categories.find { it.matchesCategory(category) }
     val rows =
         all.filter {
                 (kind == "all" || it.optString("kind") == kind) &&
                     (category.isBlank() ||
-                        categories
-                            .find { c -> c.matchesCategory(category) }
-                            ?.matchesCategory(it.optString("category")) == true) &&
+                        selectedCategory?.matchesCategory(it.optString("category")) == true) &&
                     (!favorites || it.optBoolean("favorite")) &&
                     (query.isBlank() || matchingIds?.contains(it.optString("id")) == true)
             }
             .sortedByDescending { it.optLong("modified_at") }
     LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        Modifier.fillMaxSize(),
+        state = listState,
         contentPadding = PaddingValues(bottom = 100.dp),
     ) {
         item {
-            Text(
-                "Welcome back",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
-            )
-            Heading(
-                if (notesOnly) "Your notes" else "Everything, safely kept.",
-                if (notesOnly) "A little space for thoughts that are yours."
-                else "Vault unlocked · ${all.size} encrypted items · This device only",
-            )
-        }
-        if (!notesOnly)
-            item {
-                Row(
-                    Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    listOf(
-                            "login" to "Passwords",
-                            "secure_note" to "Notes",
-                            "identity" to "Identities",
-                        )
-                        .forEach { (id, label) ->
-                            FilledTonalButton(
-                                onClick = {
-                                    kind = id
-                                    favorites = false
-                                }
-                            ) {
-                                Text("$label  ${all.count { it.optString("kind") == id }}")
-                            }
-                        }
-                    FilledTonalButton(
-                        onClick = {
-                            kind = "all"
-                            favorites = true
-                        }
-                    ) {
-                        Text("Favorites  ${all.count { it.optBoolean("favorite") }}")
-                    }
+            Row(
+                Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 18.dp),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        if (notesOnly) "Secure notes" else "Your vault",
+                        style = MaterialTheme.typography.headlineMedium,
+                    )
+                    Text(
+                        "${all.size} ${if(all.size==1)"item" else "items"} · Stored on this device",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
+                Text(
+                    "ENCRYPTED",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 3.dp),
+                )
             }
+        }
         item {
-            Field("Search your vault", query) {
+            Field(if (notesOnly) "Search notes" else "Search your vault", query) {
                 query = it
                 v.activity()
             }
         }
-        if (!notesOnly)
-            item {
-                Row(
-                    Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    FilterChip(kind == "all", { kind = "all" }, { Text("All items") })
-                    kinds.forEach { (id, name) ->
-                        FilterChip(kind == id, { kind = id }, { Text(name) })
-                    }
-                }
-            }
         item {
             Row(
-                Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                FilterChip(favorites, { favorites = !favorites }, { Text("☆ Favorites") })
-                if (categories.isNotEmpty()) {
-                    FilterChip(category.isEmpty(), { category = "" }, { Text("All categories") })
-                    categories.forEach { c ->
-                        FilterChip(
-                            category == c.optString("id"),
-                            { category = c.optString("id") },
-                            { Text(c.optString("name")) },
-                        )
+                FlatTab("All", !favorites) { favorites = false }
+                FlatTab("Favorites", favorites) { favorites = true }
+                Spacer(Modifier.weight(1f))
+                if (!notesOnly)
+                    Box {
+                        TextButton(onClick = { showTypes = true }) {
+                            Text(
+                                if (kind == "all") "All types ▾" else "${kinds[kind]} ▾",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                        DropdownMenu(
+                            showTypes,
+                            { showTypes = false },
+                            modifier = Modifier.heightIn(max = 320.dp),
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("All types") },
+                                onClick = {
+                                    kind = "all"
+                                    showTypes = false
+                                },
+                            )
+                            kinds.forEach { (id, label) ->
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    onClick = {
+                                        kind = id
+                                        showTypes = false
+                                    },
+                                )
+                            }
+                        }
                     }
-                }
             }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
         item {
-            Section(
-                if (favorites) "Favorites"
-                else if (query.isNotEmpty()) "Search results" else "Recently updated"
-            )
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.weight(1f)) {
+                    TextButton(onClick = { showCategories = true }) {
+                        Text(
+                            "${selectedCategory?.optString("name")?:"All categories"} ▾",
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    DropdownMenu(
+                        showCategories,
+                        { showCategories = false },
+                        modifier = Modifier.heightIn(max = 320.dp),
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("All categories") },
+                            onClick = {
+                                category = ""
+                                showCategories = false
+                            },
+                        )
+                        categories.forEach { c ->
+                            DropdownMenuItem(
+                                text = { Text(c.optString("name")) },
+                                onClick = {
+                                    category = c.optString("id")
+                                    showCategories = false
+                                },
+                            )
+                        }
+                    }
+                }
+                Text(
+                    if (query.isNotBlank()) "${rows.size} results" else "RECENTLY UPDATED",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         if (query.isNotBlank() && matchingIds == null)
             item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         if (rows.isEmpty() && (query.isBlank() || matchingIds != null))
             item {
-                ElevatedCard(Modifier.fillMaxWidth()) {
-                    Column(
-                        Modifier.padding(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            if (all.isEmpty()) "Make yourself at home." else "No matching items",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            if (all.isEmpty())
-                                "Tap ${if(notesOnly) "New note" else "Add item"} to keep something safe."
-                            else "Try another search or filter.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                Column(
+                    Modifier.fillMaxWidth().padding(top = 40.dp, bottom = 36.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        if (all.isEmpty())
+                            if (notesOnly) "A place for private thoughts."
+                            else "Start with your first item."
+                        else "No matching items",
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    Text(
+                        if (all.isEmpty())
+                            if (notesOnly)
+                                "Add a note to keep instructions, checklists or personal information encrypted."
+                            else
+                                "Save a login, document, identity or anything you want to keep private."
+                        else "Try another search, type or category.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (all.isEmpty())
+                        TextButton(
+                            onClick = {
+                                v.selected = null
+                                v.screen = if (notesOnly) "NewNote" else "New"
+                            }
+                        ) {
+                            Text(if (notesOnly) "+ Add a note" else "+ Add your first item")
+                        }
+                    else
+                        TextButton(
+                            onClick = {
+                                query = ""
+                                kind = "all"
+                                category = ""
+                                favorites = false
+                            }
+                        ) {
+                            Text("Clear filters")
+                        }
                 }
             }
-        items(rows, key = { it.optString("id") }) { r ->
-            RecordCard(r, categories) {
-                v.selected = r
+        items(rows, key = { it.optString("id") }) { record ->
+            FlatRecordRow(record, categories) {
+                v.selected = record
                 v.screen = "Detail"
             }
         }
@@ -171,33 +235,51 @@ internal fun VaultScreen(v: VaultModel, notesOnly: Boolean, initialCategory: Str
 }
 
 @Composable
-private fun RecordCard(record: JSONObject, categories: List<JSONObject>, open: () -> Unit) {
-    ElevatedCard(
-        onClick = open,
-        modifier = Modifier.fillMaxWidth(),
-        colors =
-            CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
-    ) {
+private fun FlatTab(label: String, selected: Boolean, click: () -> Unit) {
+    Column {
+        TextButton(onClick = click) {
+            Text(
+                label,
+                color =
+                    if (selected) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Box(
+            Modifier.width(if (label == "All") 56.dp else 94.dp)
+                .height(2.dp)
+                .background(
+                    if (selected) MaterialTheme.colorScheme.primary
+                    else androidx.compose.ui.graphics.Color.Transparent
+                )
+        )
+    }
+}
+
+@Composable
+private fun FlatRecordRow(record: JSONObject, categories: List<JSONObject>, open: () -> Unit) {
+    Column(Modifier.fillMaxWidth().clickable(onClick = open)) {
         Row(
-            Modifier.fillMaxWidth().padding(18.dp),
+            Modifier.fillMaxWidth().padding(vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Surface(
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.secondaryContainer,
+            Box(
+                Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    record.optString("title").take(1).uppercase().ifBlank { "◇" },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    fontWeight = FontWeight.Bold,
+                    record.optString("title").take(1).uppercase().ifBlank { "—" },
+                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.titleMedium,
                 )
             }
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     record.optString("title"),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     listOfNotNull(
@@ -209,6 +291,8 @@ private fun RecordCard(record: JSONObject, categories: List<JSONObject>, open: (
                         .joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 if (record.optBoolean("duplicate"))
                     Text(
@@ -218,6 +302,12 @@ private fun RecordCard(record: JSONObject, categories: List<JSONObject>, open: (
                     )
             }
             if (record.optBoolean("favorite")) Text("★", color = MaterialTheme.colorScheme.primary)
+            Text(
+                "›",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.titleLarge,
+            )
         }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }

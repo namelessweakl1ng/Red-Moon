@@ -140,7 +140,7 @@ internal fun SettingsScreen(
         item {
             Section("About your privacy")
             Text(
-                "Red Moon 2.0.0 · Argon2id + XChaCha20-Poly1305",
+                "Red Moon 2.1.0 · Argon2id + XChaCha20-Poly1305",
                 style = MaterialTheme.typography.labelMedium,
             )
             Text(

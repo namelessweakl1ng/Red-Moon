@@ -51,59 +51,57 @@ internal fun RecordDetail(v: VaultModel) {
                     },
                     enabled = !v.busy,
                 ) {
-                    Text(if (r.optBoolean("favorite")) "★ Favorited" else "☆ Favorite")
+                    Text(if (r.optBoolean("favorite")) "Favorited" else "Favorite")
                 }
             }
         }
         items(r.optJSONArray("fields").objects(), key = { it.optString("id") }) { field ->
             val fid = field.optString("id")
             val secret = field.optString("field_type") == "secret" || field.optBoolean("concealed")
-            OutlinedCard(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        field.optString("label"),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        if (secret) revealed[fid] ?: "••••••••••••" else field.optString("value"),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        if (secret)
-                            TextButton(
-                                onClick = {
-                                    if (revealed.containsKey(fid)) revealed = revealed - fid
-                                    else
-                                        v.run(
-                                            request("reveal_field")
-                                                .put("id", id)
-                                                .put("field_id", fid)
-                                        ) {
-                                            revealed =
-                                                revealed + (fid to it.payload().getString("value"))
-                                        }
-                                },
-                                enabled = !v.busy,
-                            ) {
-                                Text(if (revealed.containsKey(fid)) "Hide" else "Reveal")
-                            }
+            Column(
+                Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    field.optString("label"),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    if (secret) revealed[fid] ?: "••••••••••••" else field.optString("value"),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (secret)
                         TextButton(
                             onClick = {
-                                if (secret)
+                                if (revealed.containsKey(fid)) revealed = revealed - fid
+                                else
                                     v.run(
                                         request("reveal_field").put("id", id).put("field_id", fid)
                                     ) {
-                                        v.copyText(it.payload().getString("value"), true)
+                                        revealed =
+                                            revealed + (fid to it.payload().getString("value"))
                                     }
-                                else v.copyText(field.optString("value"), false)
                             },
                             enabled = !v.busy,
                         ) {
-                            Text(if (secret) "Copy · clears in 20s" else "Copy")
+                            Text(if (revealed.containsKey(fid)) "Hide" else "Reveal")
                         }
+                    TextButton(
+                        onClick = {
+                            if (secret)
+                                v.run(request("reveal_field").put("id", id).put("field_id", fid)) {
+                                    v.copyText(it.payload().getString("value"), true)
+                                }
+                            else v.copyText(field.optString("value"), false)
+                        },
+                        enabled = !v.busy,
+                    ) {
+                        Text(if (secret) "Copy · clears in 20s" else "Copy")
                     }
                 }
+                HorizontalDivider()
             }
         }
         if (r.optString("notes").isNotBlank())
