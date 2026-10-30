@@ -35,3 +35,7 @@ Protects a locked vault against file theft, not malware, keyloggers, compromised
 Real desktop integration and clipboard/dialog tests, Windows builds/ACL/suspend verification, final independent code review and cloud configuration persistence are outstanding. RustSec reports unresolved transitive GLib RUSTSEC-2024-0429 and unmaintained proc-macro-error RUSTSEC-2024-0370. Do not interpret passing tests as an audit or production-security claim.
 
 The approved design and plan are under `docs/superpowers/`.
+
+## Android Studio / phone application
+
+A native Kotlin/Jetpack Compose Android project is now available in [`android`](android/README.md), sharing the Rust encrypted vault core. See its README for Rust/NDK setup, Android Studio import and USB installation instructions. Desktop-specific Linux WebKit limitations do not apply to this native Android app. Device behavior must still be verified before storing real credentials.

@@ -1,4 +1,4 @@
 [workspace]
-members = ["crates/red-moon-core", "src-tauri"]
+members = ["crates/red-moon-core", "src-tauri", "crates/red-moon-android"]
 default-members = ["crates/red-moon-core"]
 resolver = "2"
