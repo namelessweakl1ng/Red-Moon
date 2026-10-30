@@ -1,0 +1,141 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Check Samsung phone and Android tools",
+			"type": "shell",
+			"command": "adb",
+			"args": [
+				"devices",
+				"-l"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Inspect local Android setup",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-lc",
+				"printf 'ANDROID_HOME=%s\\nANDROID_SDK_ROOT=%s\\n' \"$ANDROID_HOME\" \"$ANDROID_SDK_ROOT\"; command -v adb || true; command -v gradle || true; command -v cargo || true; ls -ld \"$HOME/Android/Sdk\" \"$HOME/.gradle/wrapper/dists\" android/app/build/outputs/apk/debug 2>&1"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check Samsung M31 connection",
+			"type": "shell",
+			"command": "/home/deepwork/Android/Sdk/platform-tools/adb",
+			"args": [
+				"devices",
+				"-l"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Try local Gradle Android install",
+			"type": "shell",
+			"command": "/home/deepwork/.gradle/wrapper/dists/gradle-8.10.2-bin/a04bxjujx95o3nb99gddekhwo/gradle-8.10.2/bin/gradle",
+			"args": [
+				"-p",
+				"android",
+				"installDebug",
+				"--offline"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Diagnose local Android build failure",
+			"type": "shell",
+			"command": "/home/deepwork/.gradle/wrapper/dists/gradle-8.10.2-bin/a04bxjujx95o3nb99gddekhwo/gradle-8.10.2/bin/gradle",
+			"args": [
+				"-p",
+				"android",
+				"tasks",
+				"--offline",
+				"--stacktrace"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Find compatible Java installation",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-lc",
+				"ls -la /usr/lib/jvm /opt /home/deepwork/.local/share/JetBrains/Toolbox/apps/AndroidStudio 2>&1"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check build dependency download access",
+			"type": "shell",
+			"command": "curl",
+			"args": [
+				"-IL",
+				"--connect-timeout",
+				"10",
+				"--max-time",
+				"20",
+				"https://services.gradle.org/distributions/gradle-8.11.1-bin.zip"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Retry Gradle with compatibility override",
+			"type": "shell",
+			"command": "env",
+			"args": [
+				"JAVA_TOOL_OPTIONS=-Djava.version=17",
+				"/home/deepwork/.gradle/wrapper/dists/gradle-8.10.2-bin/a04bxjujx95o3nb99gddekhwo/gradle-8.10.2/bin/gradle",
+				"-p",
+				"android",
+				"tasks",
+				"--offline"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check Red Moon installation",
+			"type": "shell",
+			"command": "/home/deepwork/Android/Sdk/platform-tools/adb",
+			"args": [
+				"shell",
+				"pm",
+				"path",
+				"com.redmoon.vault"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check Samsung Android version",
+			"type": "shell",
+			"command": "/home/deepwork/Android/Sdk/platform-tools/adb",
+			"args": [
+				"shell",
+				"getprop",
+				"ro.build.version.sdk"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check Rust build tooling",
+			"type": "shell",
+			"command": "cargo",
+			"args": [
+				"--version"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}

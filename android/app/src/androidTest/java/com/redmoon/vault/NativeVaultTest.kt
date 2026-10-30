@@ -13,10 +13,11 @@ class NativeVaultTest {
     fun realJniAuthenticatesAndLocksWithoutNetworkPermission() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val directory =
-            java.io.File(context.cacheDir, "test-${java.util.UUID.randomUUID()}").apply { mkdirs() }
-        val initialized =
-            JSONObject(NativeVault.initialize(java.io.File(directory, "vault.rm").absolutePath))
-        assertFalse(initialized.has("error"))
+            java.io.File(context.cacheDir.canonicalPath, "test-${java.util.UUID.randomUUID()}")
+                .apply { mkdirs() }
+        val vault = java.io.File(directory, "vault.rm")
+        val initialized = JSONObject(NativeVault.initialize(vault.absolutePath))
+        assertFalse(initialized.toString(), initialized.has("error"))
         fun call(request: String) =
             JSONObject(
                 NativeVault.request(request, android.os.SystemClock.elapsedRealtime() / 1000)
