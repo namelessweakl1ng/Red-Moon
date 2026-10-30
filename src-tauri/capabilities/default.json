@@ -1,0 +1,10 @@
+{
+  "identifier": "default",
+  "description": "Local vault IPC and lock notifications only.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-execute",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten"
+  ]
+}

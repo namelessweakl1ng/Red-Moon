@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-execute"
+description = "Allow the main local window to access validated vault operations."
+commands.allow = ["execute"]
